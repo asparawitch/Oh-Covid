@@ -17,7 +17,8 @@
 let score = 0;
 let laserGauge = 0;
 let hearts = [];
-let maxHearts = 2;
+let maxHearts = 3;
+let currentLife = 3; // 現在の命を数える変数を追加
 
 // --- タイトル画面のシーン ---
 class TitleScene extends Phaser.Scene {
@@ -30,15 +31,21 @@ class TitleScene extends Phaser.Scene {
         this.load.audio('failed_sound', 'Failed.mp3'); // 追加！
     }
 
-    create() {
+create() {
         this.add.image(200, 300, 'title_bg').setDisplaySize(400, 600);
-// --- ここから追加 ---
-        // まだ再生されていない場合のみ再生（シーンを戻った時に二重に鳴らないように）
-        if (!this.sound.get('bgm')) {
+
+        // --- BGM再生の決定版 ---
+        let bgm = this.sound.get('bgm');
+        if (!bgm) {
+            // 初回起動時：新しく鳴らす
             this.sound.play('bgm', { loop: true, volume: 0.25 });
+        } else if (!bgm.isPlaying) {
+            // 2回目以降（Failedで止まった後など）：再生を再開する
+            bgm.play();
         }
-        // ------------------
+        // ----------------------
         
+        // ...（以下、PUSH STARTのテキストなど）
         let startText = this.add.text(200, 500, 'PUSH START', {
             fontSize: '32px', fill: '#fff', stroke: '#000', strokeThickness: 6
         }).setOrigin(0.5);
@@ -78,10 +85,11 @@ class GameScene extends Phaser.Scene {
 
     create() {
         // 変数リセット
-        score = 0;
+score = 0;
         laserGauge = 0;
-        hearts = [];
-
+        currentLife = maxHearts; // ここで3にリセット！
+        
+        this.refreshHearts(); // ハートを描画
         // 背景（無限スクロール）
         this.cityBG = this.add.tileSprite(200, 300, 400, 600, 'city');
 
@@ -186,29 +194,33 @@ addCovid() {
         score += 500;
     }
 
-    hitEnemy(player, covid) {
+hitEnemy(player, covid) {
         covid.destroy();
-        if (hearts.length > 0) {
-            hearts.pop().destroy();
-            this.cameras.main.shake(200, 0.02);
-        }
-        if (hearts.length === 0) this.gameOver();
-    }
+        
+        currentLife--; // 命を1減らす
+        this.refreshHearts(); // 表示を更新（ハートが1つ消える）
+        this.cameras.main.shake(200, 0.02); // 画面を揺らす
 
+        if (currentLife <= 0) {
+            this.gameOver();
+        }
+    }
     getItem(player, item) {
         item.destroy();
         if (hearts.length < maxHearts) this.refreshHearts();
     }
 
-    refreshHearts() {
+refreshHearts() {
+        // 今出ている画像を全部消す
         hearts.forEach(h => h.destroy());
         hearts = [];
-        let count = (this.scene.key === 'GameScene' && hearts.length > 0) ? hearts.length + 1 : 2;
-        for (let i = 0; i < count; i++) {
-            hearts.push(this.add.image(40 + (i * 45), 40, 'mask').setScale(0.3));
+
+        // currentLife（3, 2, 1...）の数だけ画像を表示する
+        for (let i = 0; i < currentLife; i++) {
+            let h = this.add.image(40 + (i * 45), 40, 'mask').setScale(0.3);
+            hearts.push(h);
         }
     }
-
     gameOver() {
         this.physics.pause();
         this.player.setTint(0xff0000);
@@ -246,6 +258,7 @@ const game = new Phaser.Game(config);
 </body>
 
 </html>
+
 
 
 
