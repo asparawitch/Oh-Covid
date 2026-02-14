@@ -118,8 +118,8 @@ this.player.setCollideWorldBounds(true);
         this.cityBG.tilePositionY -= 2;
 
         // スコアに応じて背景色変化（夕暮れ〜夜）
-        if (score > 2000) this.cityBG.setTint(0xffaa66);
-        if (score > 5000) this.cityBG.setTint(0x6666ff);
+        if (score > 10000) this.cityBG.setTint(0xffaa66);
+        if (score > 20000) this.cityBG.setTint(0x6666ff);
 
         // 移動（マウス/タッチ追従）
         this.player.x = Phaser.Math.Linear(this.player.x, this.input.activePointer.x, 0.2);
@@ -140,7 +140,7 @@ this.player.setCollideWorldBounds(true);
         let covid = this.covids.create(x, -50, 'covid');
         let size = Phaser.Math.FloatBetween(0.2, 0.7);
 
-    covid.setScale(0.1); 
+    covid.setScale(0.01); 
     covid.setVelocityY(200);
     }
 
@@ -226,4 +226,5 @@ const config = {
 const game = new Phaser.Game(config);
 </script>
 </body>
+
 </html>
