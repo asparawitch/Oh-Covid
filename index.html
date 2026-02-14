@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stay Home リベンジ</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        canvas { box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+    </style>
+</head>
+<body>
+
+<script>
+// --- グローバル変数 ---
+let score = 0;
+let laserGauge = 0;
+let hearts = [];
+let maxHearts = 2;
+
+// --- タイトル画面のシーン ---
+class TitleScene extends Phaser.Scene {
+    constructor() { super({ key: 'TitleScene' }); }
+
+    preload() {
+        this.load.image('title_bg', 'title.png');
+        // BGMがあればここで読み込み
+        // this.load.audio('bgm', 'OH!COVID-19.mp3');
+    }
+
+    create() {
+        this.add.image(200, 300, 'title_bg').setDisplaySize(400, 600);
+        
+        let startText = this.add.text(200, 500, 'PUSH START', {
+            fontSize: '32px', fill: '#fff', stroke: '#000', strokeThickness: 6
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: startText, alpha: 0, duration: 800, yoyo: true, loop: -1
+        });
+
+        this.input.once('pointerdown', () => {
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('GameScene');
+            });
+        });
+    }
+}
+
+// --- ゲーム本編のシーン ---
+class GameScene extends Phaser.Scene {
+    constructor() { super({ key: 'GameScene' }); }
+
+    preload() {
+        this.load.image('player', 'player.png');
+        this.load.image('covid', 'covid.png');
+        this.load.image('mask', 'mask2.png');
+        this.load.image('city', 'background.png');
+    }
+
+//preload() {
+//        // ローカルファイルの代わりに、ネット上のテスト用画像を使う設定（動作確認用）
+  //      this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+    //    this.load.image('covid', 'https://labs.phaser.io/assets/sprites/apple.png');
+      //  this.load.image('mask', 'https://labs.phaser.io/assets/sprites/shinyball.png');
+ //       this.load.image('city', 'https://labs.phaser.io/assets/skies/space3.png');
+   // }
+
+    create() {
+        // 変数リセット
+        score = 0;
+        laserGauge = 0;
+        hearts = [];
+
+        // 背景（無限スクロール）
+        this.cityBG = this.add.tileSprite(200, 300, 400, 600, 'city');
+
+        // プレイヤー
+        this.player = this.physics.add.sprite(200, 500, 'player').setScale(0.5);
+        this.player.setCollideWorldBounds(true);
+
+        // グループ作成
+        this.covids = this.physics.add.group();
+        this.missiles = this.physics.add.group();
+        this.items = this.physics.add.group();
+
+        // UI: スコアとゲージ
+        this.scoreLabel = this.add.text(20, 70, 'Score: 0', { fontSize: '24px', fill: '#fff', stroke: '#000', strokeThickness: 3 });
+        this.gaugeLabel = this.add.text(20, 100, 'Special: 0%', { fontSize: '18px', fill: '#ff0', stroke: '#000', strokeThickness: 3 });
+
+        // 残機表示（初期2つ）
+        this.refreshHearts();
+
+        // 敵生成タイマー
+        this.time.addEvent({ delay: 1000, callback: this.addCovid, callbackScope: this, loop: true });
+        
+        // アイテム生成タイマー（15秒に1回）
+        this.time.addEvent({ delay: 15000, callback: this.spawnItem, callbackScope: this, loop: true });
+
+        // 当たり判定
+        this.physics.add.overlap(this.player, this.covids, this.hitEnemy, null, this);
+        this.physics.add.overlap(this.player, this.items, this.getItem, null, this);
+        this.physics.add.overlap(this.missiles, this.covids, this.destroyEnemy, null, this);
+
+        // クリックで攻撃
+        this.input.on('pointerdown', () => {
+            if (laserGauge >= 100) this.useSpecial();
+            else this.fireMissile();
+        });
+    }
+
+    update() {
+        // 背景スクロール
+        this.cityBG.tilePositionY -= 2;
+
+        // スコアに応じて背景色変化（夕暮れ〜夜）
+        if (score > 2000) this.cityBG.setTint(0xffaa66);
+        if (score > 5000) this.cityBG.setTint(0x6666ff);
+
+        // 移動（マウス/タッチ追従）
+        this.player.x = Phaser.Math.Linear(this.player.x, this.input.activePointer.x, 0.2);
+
+        // スコア加算
+        score += 1;
+        this.scoreLabel.setText('Score: ' + Math.floor(score / 10));
+
+        // ゲージ加算
+        if (laserGauge < 100) {
+            laserGauge += 0.1;
+            this.gaugeLabel.setText(`Special: ${Math.floor(laserGauge)}%`);
+        }
+    }
+
+    addCovid() {
+        let x = Phaser.Math.Between(50, 350);
+        let covid = this.covids.create(x, -50, 'covid');
+        let size = Phaser.Math.FloatBetween(0.2, 0.7);
+        covid.setScale(size);
+        covid.setVelocityY(200 + (1 - size) * 200);
+    }
+
+    spawnItem() {
+        let x = Phaser.Math.Between(50, 350);
+        let item = this.items.create(x, -50, 'mask').setScale(0.3).setTint(0x00ff00);
+        item.setVelocityY(150);
+    }
+
+    fireMissile() {
+        let m = this.missiles.create(this.player.x, this.player.y - 40, 'mask');
+        m.setScale(0.2).setVelocityY(-600);
+    }
+
+    useSpecial() {
+        laserGauge = 0;
+        this.cameras.main.flash(500, 255, 255, 255);
+        this.covids.getChildren().forEach(c => {
+            // エフェクト代わりの点滅
+            this.tweens.add({ targets: c, alpha: 0, duration: 200, onComplete: () => c.destroy() });
+        });
+        this.covids.clear(true, true);
+    }
+
+    destroyEnemy(missile, covid) {
+        missile.destroy();
+        covid.destroy();
+        score += 500;
+    }
+
+    hitEnemy(player, covid) {
+        covid.destroy();
+        if (hearts.length > 0) {
+            hearts.pop().destroy();
+            this.cameras.main.shake(200, 0.02);
+        }
+        if (hearts.length === 0) this.gameOver();
+    }
+
+    getItem(player, item) {
+        item.destroy();
+        if (hearts.length < maxHearts) this.refreshHearts();
+    }
+
+    refreshHearts() {
+        hearts.forEach(h => h.destroy());
+        hearts = [];
+        let count = (this.scene.key === 'GameScene' && hearts.length > 0) ? hearts.length + 1 : 2;
+        for (let i = 0; i < count; i++) {
+            hearts.push(this.add.image(40 + (i * 45), 40, 'mask').setScale(0.3));
+        }
+    }
+
+    gameOver() {
+        this.physics.pause();
+        this.player.setTint(0xff0000);
+        
+        let finalScore = Math.floor(score / 10);
+        let msg = `あなたのスコアは ${finalScore} です！\nおとなしく家にいましょうね！`;
+        
+        this.add.text(200, 250, 'Stay Home...', { fontSize: '40px', fill: '#f00', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5);
+        this.add.text(200, 350, msg, { fontSize: '18px', fill: '#fff', align: 'center' }).setOrigin(0.5);
+
+        let shareBtn = this.add.text(200, 450, '🐦 Twitterでシェア', { fontSize: '24px', fill: '#1DA1F2', backgroundColor: '#fff', padding: 10 }).setOrigin(0.5).setInteractive();
+        shareBtn.on('pointerdown', () => {
+            let url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(msg + " #StayHome")}`;
+            window.open(url, '_blank');
+        });
+
+        let retryBtn = this.add.text(200, 520, 'もう一度遊ぶ', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5).setInteractive();
+        retryBtn.on('pointerdown', () => this.scene.restart());
+    }
+}
+
+// --- ゲーム起動 ---
+const config = {
+    type: Phaser.AUTO,
+    width: 400,
+    height: 600,
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+    scene: [TitleScene, GameScene]
+};
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
