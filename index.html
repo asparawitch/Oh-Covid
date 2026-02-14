@@ -31,6 +31,12 @@ class TitleScene extends Phaser.Scene {
 
     create() {
         this.add.image(200, 300, 'title_bg').setDisplaySize(400, 600);
+// --- ここから追加 ---
+        // まだ再生されていない場合のみ再生（シーンを戻った時に二重に鳴らないように）
+        if (!this.sound.get('bgm')) {
+            this.sound.play('bgm', { loop: true, volume: 0.5 });
+        }
+        // ------------------
         
         let startText = this.add.text(200, 500, 'PUSH START', {
             fontSize: '32px', fill: '#fff', stroke: '#000', strokeThickness: 6
@@ -153,7 +159,7 @@ this.player.setCollideWorldBounds(true);
 
     fireMissile() {
         let m = this.missiles.create(this.player.x, this.player.y - 40, 'missile');
-        m.setScale(0.2).setVelocityY(-600);
+        m.setScale(0.05).setVelocityY(-600);
     }
 
     useSpecial() {
@@ -229,5 +235,6 @@ const game = new Phaser.Game(config);
 </body>
 
 </html>
+
 
 
