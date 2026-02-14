@@ -116,7 +116,7 @@ this.player.setCollideWorldBounds(true);
         this.refreshHearts();
 
         // 敵生成タイマー
-        this.time.addEvent({ delay: 200, callback: this.addCovid, callbackScope: this, loop: true });
+        this.time.addEvent({ delay: 400, callback: this.addCovid, callbackScope: this, loop: true });
         
         // アイテム生成タイマー（15秒に1回）
         this.time.addEvent({ delay: 15000, callback: this.spawnItem, callbackScope: this, loop: true });
@@ -138,8 +138,8 @@ this.player.setCollideWorldBounds(true);
         this.cityBG.tilePositionY -= 2;
 
         // スコアに応じて背景色変化（夕暮れ〜夜）
-        if (score > 10000) this.cityBG.setTint(0xffaa66);
-        if (score > 20000) this.cityBG.setTint(0x6666ff);
+        if (score > 20000) this.cityBG.setTint(0xffaa66);
+        if (score > 40000) this.cityBG.setTint(0x6666ff);
 
         // 移動（マウス/タッチ追従）
         this.player.x = Phaser.Math.Linear(this.player.x, this.input.activePointer.x, 0.2);
@@ -266,6 +266,7 @@ const game = new Phaser.Game(config);
 </body>
 
 </html>
+
 
 
 
