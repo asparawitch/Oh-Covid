@@ -34,13 +34,12 @@ class TitleScene extends Phaser.Scene {
 create() {
         this.add.image(200, 300, 'title_bg').setDisplaySize(400, 600);
 
-        // --- BGM再生の決定版 ---
         let bgm = this.sound.get('bgm');
         if (!bgm) {
-            // 初回起動時：新しく鳴らす
+            // 本当に初めての時だけ新しく作る
             this.sound.play('bgm', { loop: true, volume: 0.25 });
         } else if (!bgm.isPlaying) {
-            // 2回目以降（Failedで止まった後など）：再生を再開する
+            // 既にデータがあって止まっている時だけ再生する
             bgm.play();
         }
         // ----------------------
@@ -86,6 +85,11 @@ class GameScene extends Phaser.Scene {
     create() {
         // 変数リセット
 score = 0;
+        // GameScene の create() 内、score = 0; の下あたりに追加
+let bgm = this.sound.get('bgm');
+if (bgm && !bgm.isPlaying) {
+    bgm.play();
+}
         laserGauge = 0;
         currentLife = maxHearts; // ここで3にリセット！
         
@@ -205,11 +209,15 @@ hitEnemy(player, covid) {
             this.gameOver();
         }
     }
-    getItem(player, item) {
+getItem(player, item) {
         item.destroy();
-        if (hearts.length < maxHearts) this.refreshHearts();
+        
+        // 「実際の命の数」が最大値（3）より小さいかチェック
+        if (currentLife < maxHearts) {
+            currentLife++;        // 1. 実際の数字を増やす
+            this.refreshHearts(); // 2. 増えた数字をもとにハートを描き直す
+        }
     }
-
 refreshHearts() {
         // 今出ている画像を全部消す
         hearts.forEach(h => h.destroy());
@@ -258,6 +266,7 @@ const game = new Phaser.Game(config);
 </body>
 
 </html>
+
 
 
 
