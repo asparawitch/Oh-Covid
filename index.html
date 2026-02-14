@@ -27,6 +27,7 @@ class TitleScene extends Phaser.Scene {
         this.load.image('title_bg', 'title.png');
         // BGMがあればここで読み込み
      this.load.audio('bgm', 'OH!COVID-19.mp3');
+        this.load.audio('failed_sound', 'Failed.mp3'); // 追加！
     }
 
     create() {
@@ -142,15 +143,22 @@ this.player.setCollideWorldBounds(true);
         }
     }
 
-    addCovid() {
+
+addCovid() {
         let x = Phaser.Math.Between(50, 350);
         let covid = this.covids.create(x, -50, 'covid');
-        let size = Phaser.Math.FloatBetween(0.2, 0.7);
 
-    covid.setScale(0.05); 
-    covid.setVelocityY(200);
+        // 0.03（極小）から 0.15（巨大）の間でランダムに設定
+        let randomScale = Phaser.Math.FloatBetween(0.03, 0.15);
+        covid.setScale(randomScale);
+
+        // 重ね順をプレイヤーより後ろ(0)にするなら設定不要ですが、
+        // 念のため設定するなら
+        covid.setDepth(0.5);
+
+        covid.setVelocityY(200);
     }
-
+    
     spawnItem() {
         let x = Phaser.Math.Between(50, 350);
         let item = this.items.create(x, -50, 'mask').setScale(0.3).setTint(0x00ff00);
@@ -204,7 +212,10 @@ this.player.setCollideWorldBounds(true);
     gameOver() {
         this.physics.pause();
         this.player.setTint(0xff0000);
-        
+        // --- BGMを止めて失敗音を鳴らす ---
+        this.sound.stopAll(); // すべての音を停止
+        this.sound.play('failed_sound', { volume: 0.3 }); // 失敗音を再生
+        // ------------------------------
         let finalScore = Math.floor(score / 10);
         let msg = `あなたのスコアは ${finalScore} です！\nおとなしく家にいましょうね！`;
         
@@ -235,6 +246,7 @@ const game = new Phaser.Game(config);
 </body>
 
 </html>
+
 
 
 
