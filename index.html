@@ -77,9 +77,11 @@ class GameScene extends Phaser.Scene {
         // 背景（無限スクロール）
         this.cityBG = this.add.tileSprite(200, 300, 400, 600, 'city');
 
-        // プレイヤー
-        this.player = this.physics.add.sprite(200, 500, 'player').setScale(0.5);
-        this.player.setCollideWorldBounds(true);
+// プレイヤーの設定（生成・サイズ変更・重ね順を一行で！）
+this.player = this.physics.add.sprite(200, 500, 'player').setScale(0.1).setDepth(1);
+
+// 画面の外に出ないようにする設定
+this.player.setCollideWorldBounds(true);
 
         // グループ作成
         this.covids = this.physics.add.group();
@@ -137,8 +139,9 @@ class GameScene extends Phaser.Scene {
         let x = Phaser.Math.Between(50, 350);
         let covid = this.covids.create(x, -50, 'covid');
         let size = Phaser.Math.FloatBetween(0.2, 0.7);
-        covid.setScale(size);
-        covid.setVelocityY(200 + (1 - size) * 200);
+
+    covid.setScale(0.1); 
+    covid.setVelocityY(200);
     }
 
     spawnItem() {
